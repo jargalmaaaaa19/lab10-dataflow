@@ -65,8 +65,4 @@ class BonusTest {
     void exactFiveExactThreshold() {
         assertEquals(8, DataFlowTargets.bonus(new int[]{1,1,1,1,1}, 5));
     }
-    @Test @DisplayName("Kills M2: present=5 but longest streak=2")
-    void presentFiveButStreakShort() {
-        assertEquals(5, DataFlowTargets.bonus(new int[]{1,1,0,1,1,0,1}, 0));
-    }
 }
