@@ -139,15 +139,32 @@ B4. Тестүүд хоёр шатаар
 nullAttendanceThrows, negativeThresholdThrows, emptyArrayThresholdZero, singleDayMeetsThreshold, singleDayBelowThreshold, streakDoesNotBeatBest, streakGrowsBeyondBest, longStreakBelowThreshold, exactFiveExactThreshold. B3 хүснэгтийн "Тестийн ID" багана нь тус бүрийн хамарсан хосыг харуулна.
 
 B5. JaCoCo ба ажиглалт
-- results/jacoco-alldefs.csv: 2 тест, 41 branch-ээс 27 нь алдагдсан, 17 нь хамрагдсан.
+- results/jacoco-alldefs.csv: 2 тест (BonusTest), 16 branch-ээс 4 нь алдагдсан (BRANCH_MISSED=4), 12 нь хамрагдсан (BRANCH_COVERED=12). Алдагдсан 4-ийн 2 нь gcd-ийн while (тест хараахан байгаагүй), 2 нь bonus-ийнх.
 - results/jacoco-final.csv: 16 branch = bonus 14 + gcd 2 (while). BRANCH_MISSED = 0 (16/16), LINE_MISSED = 1 (мөр 7, Java-гийн далд constructor).
 All-defs хангагдсан ч branch 100% биж байж болох уу? Тийм. All-defs нь def бүрийг use-д ядаж нэг удаа хүргэхийг шаарддаг, харин p-use-ийн true/false салааг заавал хоёуланг нь шаарддаггүй.
 Branch 100% болсон мөчид DU хос үлдэж болох уу? Тийм. Жишээ нь P19 (score,49)→(score,54) ба P22 (score,51)→(score,56) хосууд салаануудын хослол (combination) шаарддаг тул 4 үндсэн тестэд үлдсэн байсан.
+
+B4 нэмэлт: all-defs яагаад 2 тест вэ
+score-ийн def нь 49, 51, 54. score@49 нь 56-д хүрэхийн тулд 50 = F (мөн 53 = F) байх ёстой. score@51 үүсэхийн тулд 50 = T байх ёстой, мөн 51 нь score@49-ийг дарж бичдэг. Иймд score@49 ба score@51-ийг нэг гүйцэтгэлд use-д хүргэх боломжгүй, тиймээс 1 тест хүрэлцэхгүй. Хоёр тест (allDefs_longStreakThenBreak, allDefs_emptyBelowThreshold) бүх def-ийг хамарна, тиймээс 2 нь хамгийн цөөн.
+
+B5 нэмэлт: branch 100% боловч DU хос үлдсэн жишээ
+Дараах 4 тест bonus()-ийн 14 branch-ийг бүгдийг хамарна: (1) bonus(null, 0); (2) bonus({1}, -1); (3) bonus({1,1,1,1,1,0,1}, 3) -> 50=T, 53=T, 42 T/F, 39 T/F; (4) bonus({1,0,1}, 5) -> 50=F, 53=F. Гэвч P19 (score@49 -> 54, 50=F ба 53=T шаардана) ба P22 (score@51 -> 56, 50=T ба 53=F шаардана) хос хамрагдахгүй. Учир нь 50 ба 53-ийн (F,T), (T,F) хослол энэ 4 тестэд байхгүй. Эдгээрийг longStreakBelowThreshold (P19) ба emptyArrayThresholdZero (P22) тестүүд нэмж хамруулсан.
 
 C: Fault seeding
 - M1 (мөр 41 streak = streak + 1 устгасан): 3 тест унасан (M1 баригдсан).
 - M2 (мөр 42–44 → best = present;): 13 тестээр амьд үлдсэн (DU хос дайрагдсан ч утга зөв эсэхийг шалгаагүйгээс болсон). M2KillerTest нэмсний дараа 14 тестээр баригдсан.
 - M3 (давталтын дараа int total = present + best;): Үхсэн def (dead definition) тул ямар ч тест унагаагүй, харин VS Code (Java extension) "The value of the local variable total is not used" гэсэн static analysis анхааруулга өгсөн.
+
+C нэмэлт: мутацийн үр дүнгийн хүснэгт
+Мутаци | Төрөл | Тест (Tests run) | Унасан тест | expected / was | Үр дүн
+M1 (мөр 41 устгасан) | Missing update | 13, Failures 3 | BonusTest.allDefs_longStreakThenBreak; BonusTest.longStreakBelowThreshold; BonusTest.exactFiveExactThreshold | expected: <8> but was: <5>; expected: <3> but was: <0>; expected: <8> but was: <5> | БАРИГДСАН
+M2 (best = present) | Wrong variable | 13, Failures 0 | - | - | АМЬД ҮЛДСЭН
+M2 + M2KillerTest | Wrong variable | 14, Failures 1 | M2KillerTest.presentFiveButStreakShort | expected: <5> but was: <8> | БАРИГДСАН
+M3 (int total = present + best) | Dead definition | 13, Failures 0 | - | - | АМЬД ҮЛДСЭН (тест барьдаггүй)
+(Эх сурвалж: results/mvn-test-M1.txt, mvn-test-M2.txt, mvn-test-M2-kill.txt, mvn-test-M3.txt)
+
+M2 яагаад амьд үлдсэн бэ: all-DU-pairs тестүүдийн бүх тохиолдолд best шинэчлэгдэх мөчид present == streak байсан (цуваа тасраагүй, эсвэл present болон streak хоёр адил өсдөг). Тиймээс best = streak ба best = present ижил утга өгч, DU хос (present@40 -> 43 шиг use) дайрагдсан ч утга ялгарсангүй. M2KillerTest нь {1,1,0,1,1,0,1}, threshold 0 өгдөг: present = 5 боловч хамгийн урт цуваа = 2. Мутацитай код best = 5 болгож 53-д T өгч, 8 буцаана (зөв нь 5).
+M3 яагаад унагадаггүй вэ: total хаана ч хэрэглэгдэхгүй тул bonus()-ийн буцаах утгад нөлөөлөхгүй. Ажиллах үеийн үр дүн хэвээр тул ямар ч тест унахгүй, javac ч анхааруулдаггүй. Static analysis (IDE-ийн unused variable анхааруулга: "The value of the local variable total is not used") энэ dead definition-ийг барина.
 
 Эцсийн шалгалт
 - git status-д DataFlowTargets.java өөрчлөгдсөн гэж гарахгүй.
